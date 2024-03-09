@@ -1,0 +1,114 @@
+import tkinter as tk
+from tkinter import filedialog
+import os
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+
+class GraphsApp:
+    def __init__(self, master):
+        self.master = master
+        self.master.title("Graphs")
+
+        self.master.geometry(f"500x500+{(self.master.winfo_screenwidth()//2)-(500//2)}+{(self.master.winfo_screenheight()//2)-(500//2)}")
+
+        self.frame = tk.Frame(self.master)
+        self.frame.pack(padx=10, pady=10)
+
+        title_label = tk.Label(self.frame, text="Overview of Dataset", font=('Helvetica', 16))
+        title_label.grid(row=0, column=0, pady=10)
+
+        self.overview_button = tk.Button(self.frame, text="Select File", command=self.overview_graph)
+        self.overview_button.grid(row=1, column=0, pady=10)
+
+        self.overview_file_label = tk.Label(self.frame, text="", font=('Helvetica', 10))
+        self.overview_file_label.grid(row=2, column=0)
+
+        self.show_graph_button = tk.Button(self.frame, text="Show Graph", command=self.plot_overview)
+        self.show_graph_button.grid(row=3, column=0, pady=10)
+
+        tk.Label(self.frame, text="").grid(row=4, column=0)
+
+        linear_quadratic_label = tk.Label(self.frame, text="Graphs for Linear and Quadratic", font=('Helvetica', 16))
+        linear_quadratic_label.grid(row=5, column=0, pady=10)
+
+        self.submit_button = tk.Button(self.frame, text="Select File", command=self.linear_quadratic_graph)
+        self.submit_button.grid(row=6, column=0, pady=10)
+        
+        self.linear_quadratic_file_label = tk.Label(self.frame, text="", font=('Helvetica', 10))
+        self.linear_quadratic_file_label.grid(row=7, column=0)
+        
+        self.show_graph_button = tk.Button(self.frame, text="Show linear quadratic Graph", command=self.plot_linear_quadratic_graphs)
+        self.show_graph_button.grid(row=8, column=0, pady=10)
+
+    def overview_graph(self):
+        self.overview_file_path = filedialog.askopenfilename(title="Select Dataset File", filetypes=[("Excel Files", "*.xlsx"), ("CSV Files", "*.csv")])
+        if self.overview_file_path:
+            file_name = os.path.basename(self.overview_file_path)
+            self.overview_file_label.config(text=f"{file_name}")
+            return pd.read_excel(self.overview_file_path) if self.overview_file_path.endswith('.xlsx') else pd.read_csv(self.overview_file_path)
+        else:
+            return None
+    
+    def linear_quadratic_graph(self):
+        self.linear_quadratic_file_path = filedialog.askopenfilename(title="Select Dataset File", filetypes=[("Excel Files", "*.xlsx"), ("CSV Files", "*.csv")])
+        if self.linear_quadratic_file_path:
+            file_name = os.path.basename(self.linear_quadratic_file_path)
+            self.linear_quadratic_file_label.config(text=f"{file_name}")
+            return pd.read_excel(self.linear_quadratic_file_path) if self.linear_quadratic_file_path.endswith('.xlsx') else pd.read_csv(self.linear_quadratic_file_path)
+        else:
+            return None
+
+    def plot_overview(self):
+        try:
+            self.data1 = pd.read_excel(self.overview_file_path)
+        except:
+            self.data1 = pd.read_csv(self.overview_file_path)
+        if self.data1 is not None:
+            self.x = list(self.data1.iloc[:,0].values)
+            self.y = list(self.data1.iloc[:,5].values)
+            plt.plot(self.x,self.y)
+            plt.xlabel("TIME ( s )")
+            plt.ylabel("Wear(um)")
+            plt.title("Overview of Dataset")
+            plt.show()
+
+    def plot_linear_quadratic_graphs(self):
+        try:
+            self.data2 = pd.read_excel(self.linear_quadratic_file_path)
+        except:
+            self.data2 = pd.read_csv(self.linear_quadratic_file_path)
+        
+        fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+        
+        for index, row in self.data2.iterrows():
+            start_point, end_point, slope, constant = row["Start point"], row["End point"], row["Lb"], row["La"]
+            x_values = np.linspace(start_point, end_point, 100)
+            y_values = slope * x_values + constant
+            ax1.plot(x_values, y_values, label=f"Segment {int(start_point)} to {int(end_point)}")
+        ax1.set_ylabel("Wear(um)")
+        ax1.set_title("Linear Segments")
+        ax1.legend()
+
+        for index, row in self.data2.iterrows():
+            start_point, end_point, coefx2, coefx, constant = row["Start point"], row["End point"], row["Qc"], row["Qb"], row["Qa"]
+            x_values = np.linspace(start_point, end_point, 100)
+            y_values = coefx2 * x_values**2 + coefx * x_values + constant
+            ax2.plot(x_values, y_values, label=f"Segment {int(start_point)} to {int(end_point)}")
+
+        ax2.set_xlabel("TIME (s)")
+        ax2.set_ylabel("Wear(um)")
+        ax2.set_title("Quadratic Segments")
+        ax2.legend()
+
+        plt.show()
+
+
+def main():
+    root = tk.Tk()
+    app = GraphsApp(root)
+    root.mainloop()
+
+
+if __name__ == "__main__":
+    main()
